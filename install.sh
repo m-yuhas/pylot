@@ -1,5 +1,8 @@
 #!/bin/bash
 
+echo "TEST: Make Sure this Script is updated"
+export DEBIAN_FRONTEND=nointeractive 
+
 if [ -z $PYLOT_HOME ] ; then
     PYLOT_HOME=$(pwd)
     echo "WARNING: \$PYLOT_HOME is not set; Setting it to ${PYLOT_HOME}"
