@@ -14,7 +14,7 @@ from pylot.drivers.sensor_setup import DepthCameraSetup, RGBCameraSetup, \
 FLAGS = flags.FLAGS
 
 # Flags that control what data is recorded.
-flags.DEFINE_bool('log_rgb_camera', False,
+flags.DEFINE_bool('log_rgb_camera', True,
                   'True to enable center camera RGB logging')
 flags.DEFINE_bool('log_segmented_camera', False,
                   'True to enable center segmented camera logging')
