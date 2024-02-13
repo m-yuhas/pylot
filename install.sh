@@ -1,6 +1,5 @@
 #!/bin/bash
 
-echo "TEST: Make Sure this Script is updated"
 export DEBIAN_FRONTEND=nointeractive 
 
 if [ -z $PYLOT_HOME ] ; then
@@ -11,14 +10,17 @@ else
 fi
 
 sudo apt-get -y update
+echo "CHECK1"
 sudo DEBIAN_FRONTEND=nointeractive apt-get install -y git wget cmake python3-pip unzip clang libpng-dev libgeos-dev
 # Install opencv separately because pip3 install doesn't install all libraries
 # opencv requires.
+echo "CHECK2"
 sudo DEBIAN_FRONTEND=nointeractive apt-get install -y python3-opencv
 python3 -m pip install user gdown
 # Install Pygame if available.
 PYGAME_PKG=`apt-cache search python3-pygame`
 if [ -n "$PYGAME_PKG" ] ; then
+    echo "CHECK3"
     sudo DEBIAN_FRONTEND=nointeractive apt-get install python3-pygame
 fi
 
@@ -65,6 +67,7 @@ git clone https://github.com/erdos-project/prediction.git
 echo "[x] Cloning the object tracking code..."
 cd $PYLOT_HOME/dependencies/
 git clone https://github.com/ICGog/nanonets_object_tracking.git
+echo "CHECK4"
 sudo DEBIAN_FRONTEND=nointeractive apt-get install python3-tk
 git clone https://github.com/ICGog/sort.git
 ###### Download the DaSiamRPN code ######
@@ -78,6 +81,7 @@ git clone https://github.com/ICGog/CenterTrack
 cd CenterTrack/src/lib/model/networks/
 git clone https://github.com/CharlesShang/DCNv2/
 cd DCNv2
+echo "CHECK5"
 sudo DEBIAN_FRONTEND=nointeractive apt-get install llvm-9
 export LLVM_CONFIG=/usr/bin/llvm-config-9
 python3 setup.py build develop user
