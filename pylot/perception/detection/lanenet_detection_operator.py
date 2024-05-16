@@ -16,7 +16,10 @@ from pylot.perception.detection.lane import Lane
 import tensorflow as tf
 
 import torch
-from cocoddnn_sched import main_loop
+import torch.nn.functional as F
+from torchvision import transforms
+from pylot.perception.detection.cocoddnn_sched import main_loop
+from PIL import Image
 
 class LanenetDetectionOperator(erdos.Operator):
     """Detecs driving lanes using a camera.
@@ -97,34 +100,62 @@ class LanenetDetectionOperator(erdos.Operator):
         self._logger.debug('@{}: {} received message'.format(
             msg.timestamp, self.config.name))
         assert msg.frame.encoding == 'BGR', 'Expects BGR frames'
-        #image = cv2.resize(msg.frame.as_rgb_numpy_array(), (512, 256),
-        #                   interpolation=cv2.INTER_LINEAR)
-        #image = image / 127.5 - 1.0
-        #binary_seg_image, instance_seg_image = self._tf_session.run(
-        #    [self._binary_seg_ret, self._instance_seg_ret],
-        #    feed_dict={self._input_tensor: [image]})
+        # Original Lanenet
+        """
+        image = cv2.resize(msg.frame.as_rgb_numpy_array(), (512, 256),
+                           interpolation=cv2.INTER_LINEAR)
+        image = image / 127.5 - 1.0
+        binary_seg_image, instance_seg_image = self._tf_session.run(
+            [self._binary_seg_ret, self._instance_seg_ret],
+            feed_dict={self._input_tensor: [image]})
+        cv2.imwrite('test.png', instance_seg_image[0])
+        """
         # Call to Scheduler
+        
         image = cv2.cvtColor(msg.frame.as_rgb_numpy_array(), cv2.COLOR_BGR2RGB)
-        image = cv2.resize(image, (416, 416))
-        image = np.transpose(image, (2,0,1))
+        image = Image.fromarray(image)
+        data_transform = transforms.Compose([
+            transforms.Resize((416,416)),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ])
+        image = data_transform(image)
         image = torch.unsqueeze(torch.Tensor(image), 0)
-        binary_seg_image, instance_seg_image = main_loop(image, 'static_dc_pri.json')
-        binary_seg_image = torch.squeeze(binary_seg_image).numpy()
-        instance_seg_image = torch.squeeze(instance_seg_image).numpy()
-        binary_seg_image = np.transpose(image, (1, 2, 0))
-        instance_seg_image = np.transpose(image, (1, 2, 0))
- 
+        binary_seg_image, instance_seg_image = main_loop(image, 'pylot/perception/detection/static_dc_pri.json')
+        binary_seg_image = torch.squeeze(torch.argmax(F.softmax(binary_seg_image, dim=1), dim=1, keepdim=True).detach().to('cpu')).numpy() #* 255
+        instance_seg_image = torch.squeeze(torch.sigmoid(instance_seg_image).detach().to('cpu')).numpy() * 255
+
+        #binary_seg_image = torch.squeeze(binary_seg_image).numpy()
+        #instance_seg_image = torch.squeeze(instance_seg_image).numpy()
+        #binary_seg_image = np.transpose(binary_seg_image, (1,2,0))
+        #instance_seg_image = np.transpose(instance_seg_image, (1,2,0))
+        #binary_seg_image = binary_seg_image[:,:,1]
+        instance_seg_image = cv2.resize(instance_seg_image.transpose((1,2,0)).astype(np.uint8), (512, 256))
+        binary_seg_image = cv2.resize(binary_seg_image.astype(np.uint8), (512, 256))
+        cv2.imwrite('test.png', instance_seg_image)
+        binary_seg_image = np.expand_dims(binary_seg_image, 0)
+        instance_seg_image = np.expand_dims(instance_seg_image, 0)
+        #c1, c2, c3 = cv2.split(instance_seg_image)
+        #c4 = np.zeros((256, 512))
+        #instance_seg_image = cv2.merge((c1, c2, c3, c4))
+        
+        print(binary_seg_image.shape)
+        print(instance_seg_image)
+        #binary_seg_image = np.transpose(image, (1, 2, 0))
+        #instance_seg_image = np.transpose(image, (1, 2, 0))
         postprocess_result = self._postprocessor.postprocess(
             binary_seg_result=binary_seg_image[0],
             instance_seg_result=instance_seg_image[0],
             source_image=msg.frame.frame)
-        # mask_image = postprocess_result['mask_image']
+
+        #mask_image = postprocess_result['mask_image']
         # for i in range(4):
         #     instance_seg_image[0][:, :, i] = \
         #         minmax_scale(instance_seg_image[0][:, :, i])
         # embedding_image = np.array(instance_seg_image[0], np.uint8)
 
         lanes = postprocess_result['lanes']
+
         ego_lane_markings = []
         for lane in lanes:
             ego_markings = self.lane_to_ego_coordinates(
