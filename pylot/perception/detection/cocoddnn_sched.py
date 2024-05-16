@@ -2,6 +2,8 @@ import torch
 import torchvision
 import json
 
+import time
+
 
 class IndependentDnn:
     def __init__(self, num_blocks: int, base_name: str):
@@ -13,16 +15,23 @@ class IndependentDnn:
         for i in range(num_blocks):
             self.fblocks.append(torch.jit.load(f"{base_name}{i}.pt"))
             self.qblocks.append(torch.jit.load(f"{base_name}{i}q.pt"))
+        with open('time_log.csv', 'w') as fp:
+            fp.write('Start,Context Switch,End,Block,Location\n')
 
     def run_next_block(self, location: str):
         self.last_run += 1
+        start = time.time()
         next_block = self.fblocks[self.last_run] if location == "f" else self.qblocks[self.last_run]
+        cntxtsw = time.time()
         self.next_input.to(torch.device('cuda' if location == "f" else 'cpu'))
         if self.last_run < 3:
             bin, inst, nxt = next_block(self.next_input)
             self.next_input = nxt
         else:
             bin, inst = next_block(self.next_input)
+        end = time.time()
+        with open('time_log.csv', 'a') as fp:
+            fp.write(f'{start},{cntxtsw},{end},{self.last_run},{location}\n')
         self.last_result = (bin, inst)
         
     def get_last_result(self):

@@ -15,6 +15,8 @@ from pylot.perception.detection.lane import Lane
 
 import tensorflow as tf
 
+import torch
+from cocoddnn_sched import main_loop
 
 class LanenetDetectionOperator(erdos.Operator):
     """Detecs driving lanes using a camera.
@@ -95,13 +97,23 @@ class LanenetDetectionOperator(erdos.Operator):
         self._logger.debug('@{}: {} received message'.format(
             msg.timestamp, self.config.name))
         assert msg.frame.encoding == 'BGR', 'Expects BGR frames'
-        image = cv2.resize(msg.frame.as_rgb_numpy_array(), (512, 256),
-                           interpolation=cv2.INTER_LINEAR)
-        image = image / 127.5 - 1.0
-        binary_seg_image, instance_seg_image = self._tf_session.run(
-            [self._binary_seg_ret, self._instance_seg_ret],
-            feed_dict={self._input_tensor: [image]})
-
+        #image = cv2.resize(msg.frame.as_rgb_numpy_array(), (512, 256),
+        #                   interpolation=cv2.INTER_LINEAR)
+        #image = image / 127.5 - 1.0
+        #binary_seg_image, instance_seg_image = self._tf_session.run(
+        #    [self._binary_seg_ret, self._instance_seg_ret],
+        #    feed_dict={self._input_tensor: [image]})
+        # Call to Scheduler
+        image = cv2.cvtColor(msg.frame.as_rgb_numpy_array(), cv2.COLOR_BGR2RGB)
+        image = cv2.resize(image, (416, 416))
+        image = np.transpose(image, (2,0,1))
+        image = torch.unsqueeze(torch.Tensor(image), 0)
+        binary_seg_image, instance_seg_image = main_loop(image, 'static_dc_pri.json')
+        binary_seg_image = torch.squeeze(binary_seg_image).numpy()
+        instance_seg_image = torch.squeeze(instance_seg_image).numpy()
+        binary_seg_image = np.transpose(image, (1, 2, 0))
+        instance_seg_image = np.transpose(image, (1, 2, 0))
+ 
         postprocess_result = self._postprocessor.postprocess(
             binary_seg_result=binary_seg_image[0],
             instance_seg_result=instance_seg_image[0],
