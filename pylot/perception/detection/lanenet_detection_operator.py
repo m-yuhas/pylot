@@ -125,24 +125,12 @@ class LanenetDetectionOperator(erdos.Operator):
         binary_seg_image = torch.squeeze(torch.argmax(F.softmax(binary_seg_image, dim=1), dim=1, keepdim=True).detach().to('cpu')).numpy() #* 255
         instance_seg_image = torch.squeeze(torch.sigmoid(instance_seg_image).detach().to('cpu')).numpy() * 255
 
-        #binary_seg_image = torch.squeeze(binary_seg_image).numpy()
-        #instance_seg_image = torch.squeeze(instance_seg_image).numpy()
-        #binary_seg_image = np.transpose(binary_seg_image, (1,2,0))
-        #instance_seg_image = np.transpose(instance_seg_image, (1,2,0))
-        #binary_seg_image = binary_seg_image[:,:,1]
         instance_seg_image = cv2.resize(instance_seg_image.transpose((1,2,0)).astype(np.uint8), (512, 256))
         binary_seg_image = cv2.resize(binary_seg_image.astype(np.uint8), (512, 256))
         cv2.imwrite('test.png', instance_seg_image)
         binary_seg_image = np.expand_dims(binary_seg_image, 0)
         instance_seg_image = np.expand_dims(instance_seg_image, 0)
-        #c1, c2, c3 = cv2.split(instance_seg_image)
-        #c4 = np.zeros((256, 512))
-        #instance_seg_image = cv2.merge((c1, c2, c3, c4))
         
-        print(binary_seg_image.shape)
-        print(instance_seg_image)
-        #binary_seg_image = np.transpose(image, (1, 2, 0))
-        #instance_seg_image = np.transpose(image, (1, 2, 0))
         postprocess_result = self._postprocessor.postprocess(
             binary_seg_result=binary_seg_image[0],
             instance_seg_result=instance_seg_image[0],

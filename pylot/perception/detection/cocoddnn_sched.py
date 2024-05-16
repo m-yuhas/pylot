@@ -15,8 +15,8 @@ class DependentDnn:
         for i in range(num_blocks):
             self.fblocks.append(torch.jit.load(f"pylot/perception/detection/{base_name}block{i}.pt"))
             self.qblocks.append(torch.jit.load(f"pylot/perception/detection/{base_name}block{i}q.pt"))
-        with open('time_log.csv', 'w') as fp:
-            fp.write('Start,Context Switch,End,Block,Location\n')
+        #with open('time_log.csv', 'w') as fp:
+        #    fp.write('Start,Context Switch,End,Block,Location\n')
 
     def run_next_block(self, location: str):
         self.last_run += 1
